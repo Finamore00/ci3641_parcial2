@@ -150,6 +150,7 @@ func NewUnionType(name string, alts []string, dic *map[string]dataTypes.DataType
 	//Se calculan los detalles de la union para cada configuracion de registros
 	regSize, regAlign := unionMemReg(members)
 	pacSize, pacAlign := unionMemPacked(members)
+	optSize, optAlign := unionMemOpt(members)
 
 	newUnion := dataTypes.DataType{
 		Name:          name,
@@ -163,7 +164,7 @@ func NewUnionType(name string, alts []string, dic *map[string]dataTypes.DataType
 			}{
 				Regular: regSize,
 				Packed:  pacSize,
-				Ordered: uint(0),
+				Ordered: optSize,
 			},
 			Alignment: struct {
 				Regular uint
@@ -172,7 +173,7 @@ func NewUnionType(name string, alts []string, dic *map[string]dataTypes.DataType
 			}{
 				Regular: regAlign,
 				Packed:  pacAlign,
-				Ordered: uint(0),
+				Ordered: optAlign,
 			},
 			TypeAlternatives: alts,
 		},
@@ -265,6 +266,47 @@ func unionMemPacked(members []dataTypes.DataType) (uint, uint) {
 }
 
 /*
+Funcion que retorna el tamaño y alineamiento de un registro variante
+cuyos posibles tipos son los hallados en members. Se asume que los
+registros reordenan sus miembros para minimizar el uso de espacio
+respetando alineamientos.
+*/
+func unionMemOpt(members []dataTypes.DataType) (uint, uint) {
+	size := uint(0)
+	align := uint(0)
+	memberAligns := []uint{}
+
+	for _, t := range members {
+		//Esencialmente se busca el tipo de dato más grande
+		switch {
+		case t.AtomicDetails != nil:
+			if t.AtomicDetails.Size > size {
+				size = t.AtomicDetails.Size
+			}
+			memberAligns = append(memberAligns, t.AtomicDetails.Alignment)
+		case t.StructDetails != nil:
+			if t.StructDetails.Sizes.Ordered > size {
+				size = t.StructDetails.Alignments.Ordered
+			}
+			memberAligns = append(memberAligns, t.StructDetails.Alignments.Ordered)
+		case t.UnionDetails != nil:
+			if t.UnionDetails.Size.Ordered > size {
+				size = t.UnionDetails.Size.Ordered
+			}
+			memberAligns = append(memberAligns, t.UnionDetails.Alignment.Ordered)
+		}
+	}
+
+	//Se calcula el m.c.m de las alineaciones de los miembros
+	align = memberAligns[0]
+	for _, al := range memberAligns {
+		align = mcm(align, al)
+	}
+
+	return size, align
+}
+
+/*
 Función que recibe el nombre y los tipos miembros de un nuevo tipo struct
 y devuelve el objeto DataType que lo representa. Se asume que todos los
 tipos ingresados existen.
@@ -279,6 +321,7 @@ func NewStructType(name string, members []string, dic *map[string]dataTypes.Data
 	//Se calculan los detalles del struct para cada modalidad de agrupacion
 	regSize, regAlign, regWaste := structMemReg(mem)
 	pacSize, pacAlign, pacWaste := structMemPack(mem)
+	optSize, optAlign, optWaste := structMemOpt(mem)
 	//Falta por hacer el tamaño óptimo. Seguiré pensando en eso
 
 	//Se crea el nuevo objeto y se retorna
@@ -293,7 +336,7 @@ func NewStructType(name string, members []string, dic *map[string]dataTypes.Data
 			}{
 				Regular: regSize,
 				Packed:  pacSize,
-				Ordered: uint(0),
+				Ordered: optSize,
 			},
 			Alignments: struct {
 				Regular uint
@@ -302,7 +345,7 @@ func NewStructType(name string, members []string, dic *map[string]dataTypes.Data
 			}{
 				Regular: regAlign,
 				Packed:  pacAlign,
-				Ordered: uint(0),
+				Ordered: optAlign,
 			},
 			Wasted: struct {
 				Regular uint
@@ -311,7 +354,7 @@ func NewStructType(name string, members []string, dic *map[string]dataTypes.Data
 			}{
 				Regular: regWaste,
 				Packed:  pacWaste,
-				Ordered: uint(0),
+				Ordered: optWaste,
 			},
 			MemberTypes: members,
 		},
@@ -390,7 +433,50 @@ func structMemPack(members []dataTypes.DataType) (uint, uint, uint) {
 	return accum, align, uint(0)
 }
 
-//TO-DO TAMAÑO OPTIMIZADO DE UN STRUCT
+/*
+Funcion que calcula el tamaño total de un struct si sus miembros son reordenados
+para usar el menor espacio posible respetando los alineamientos.
+*/
+func structMemOpt(members []dataTypes.DataType) (uint, uint, uint) {
+	minWaste := uint(4294967295) //Max value of uint
+	minSize := uint(4294967295)
+	var minAlign uint
+
+	possibleOrderings := permutation(members)
+
+	for _, order := range possibleOrderings {
+		s, a, w := structMemReg(order)
+		if s < minSize {
+			minWaste = w
+			minSize = s
+			minAlign = a
+		}
+	}
+
+	return minSize, minAlign, minWaste
+}
+
+/*
+Funcion auxiliar para obtener todas las permutaciones de un slice
+de tipos de datos
+*/
+func permutation(xs []dataTypes.DataType) (permuts [][]dataTypes.DataType) {
+	var rc func([]dataTypes.DataType, int)
+	rc = func(a []dataTypes.DataType, k int) {
+		if k == len(a) {
+			permuts = append(permuts, append([]dataTypes.DataType{}, a...))
+		} else {
+			for i := k; i < len(xs); i++ {
+				a[k], a[i] = a[i], a[k]
+				rc(a, k+1)
+				a[k], a[i] = a[i], a[k]
+			}
+		}
+	}
+	rc(xs, 0)
+
+	return permuts
+}
 
 /*
 Funcion que calcula el minimo comun multiplo (m.c.m.) de dos enteros sin signo.
@@ -421,19 +507,24 @@ func ShowDataType(t dataTypes.DataType) {
 		fmt.Println("\tTamaño de representación del dato:")
 		fmt.Println("\t\tDatos sin empaquetar:", t.StructDetails.Sizes.Regular)
 		fmt.Println("\t\tDatos empaquetados:", t.StructDetails.Sizes.Packed)
+		fmt.Println("\t\tOrdenamiento óptimo:", t.StructDetails.Sizes.Ordered)
 		fmt.Println("\tAlineación del dato:")
 		fmt.Println("\t\tDatos sin empaquetar:", t.StructDetails.Alignments.Regular)
 		fmt.Println("\t\tDatos empaquetados:", t.StructDetails.Alignments.Packed)
+		fmt.Println("\t\tOrdenamiento óptimo:", t.StructDetails.Alignments.Ordered)
 		fmt.Println("\tEspacio desperdiciado:")
 		fmt.Println("\t\tDatos sin empaquetar:", t.StructDetails.Wasted.Regular)
 		fmt.Println("\t\tDatos empaquetados:", t.StructDetails.Wasted.Packed)
+		fmt.Println("\t\tOrdenamiento óptimo:", t.StructDetails.Wasted.Ordered)
 	case t.UnionDetails != nil:
 		fmt.Println("\tTamaño de representación de dato:")
 		fmt.Println("\t\tDatos sin empaquetar:", t.UnionDetails.Size.Regular)
 		fmt.Println("\t\tDatos empaquetados:", t.UnionDetails.Size.Packed)
+		fmt.Println("\t\tOrdenamiento óptimo:", t.UnionDetails.Size.Ordered)
 		fmt.Println("\tAlineación del dato:")
 		fmt.Println("\t\tDatos sin empaquetar:", t.UnionDetails.Alignment.Regular)
 		fmt.Println("\t\tDatos empaquetados:", t.UnionDetails.Alignment.Packed)
+		fmt.Println("\t\tOrdenamiento óptimo:", t.UnionDetails.Alignment.Ordered)
 	}
 }
 
