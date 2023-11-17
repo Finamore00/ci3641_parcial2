@@ -38,7 +38,7 @@ Version con recursion de cola
 */
 func F65TailRec(n uint64) uint64 {
 	var aux func(uint64, uint64, []uint64) uint64
-	baseCases := make([]uint64, 30, 1000)
+	baseCases := make([]uint64, 30, 1000) //Capacidad de 1000, para evitar redesignacion de memoria en runtime
 	for i := range baseCases {
 		baseCases[i] = uint64(i)
 	}
@@ -59,7 +59,7 @@ Versión iterativa
 */
 func F65Iter(n uint64) uint64 {
 	i := uint64(0)
-	baseCases := make([]uint64, 30, 1000)
+	baseCases := make([]uint64, 30, 1000) //Capacidad de 1000, para evitar redesignacion de memoria en runtime
 	for i := range baseCases {
 		baseCases[i] = uint64(i)
 	}
