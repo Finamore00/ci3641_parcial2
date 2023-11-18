@@ -594,3 +594,11 @@ func PrintHelp() {
 	fmt.Println("\tv. SALIR")
 	fmt.Println("\t\tCulmina la ejecución del programa")
 }
+
+/*
+Indica al usuario que se cometió un error en el ingreso de un comando
+*/
+func PrintGenericCmdErr() {
+	fmt.Println("Comando ingresado desconocido o mal formateado.")
+	fmt.Println("Para ver comandos disponibles y su uso ver 'help'")
+}

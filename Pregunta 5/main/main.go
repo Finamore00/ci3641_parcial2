@@ -71,6 +71,8 @@ func main() {
 			clientFunctions.PrintHelp()
 		case input == "salir":
 			exitFlag = true
+		default:
+			clientFunctions.PrintGenericCmdErr()
 		}
 		if exitFlag {
 			break
