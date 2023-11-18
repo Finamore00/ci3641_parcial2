@@ -9,6 +9,6 @@
 ## Consideraciones
 
 * El cliente que ejecuta los benchmarks está programado para siempre almacenar los resultados en un 
-archivo de nombre `resultados.csv`. En caso de querer almacenar varios resultados de mediciones deberá
+archivo de nombre `results.csv`. En caso de querer almacenar varios resultados de mediciones deberá
 respaldar cualquier archivo de resultados antes de correr el programa nuevamente. De lo contrario el 
 archivo de resultados existente será sobreescrito.
