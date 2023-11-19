@@ -286,7 +286,7 @@ func unionMemOpt(members []dataTypes.DataType) (uint, uint) {
 			memberAligns = append(memberAligns, t.AtomicDetails.Alignment)
 		case t.StructDetails != nil:
 			if t.StructDetails.Sizes.Ordered > size {
-				size = t.StructDetails.Alignments.Ordered
+				size = t.StructDetails.Sizes.Ordered
 			}
 			memberAligns = append(memberAligns, t.StructDetails.Alignments.Ordered)
 		case t.UnionDetails != nil:
