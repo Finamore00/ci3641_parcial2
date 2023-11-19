@@ -14,3 +14,6 @@ ejecutar el programa con esta versión de Go en pro de evitar inconvenientes
 * En caso de desear compilar a un binario, asegurarse de que el nombre del mismo sea distinto a cualquiera de 
 los directorios ya existentes (clientFunctions, dataTypes, main). Esto debido a que si se usa cualquiera de estos
 nombres se presentan colisiones y el compilador no generará el ejecutable.
+
+## Pruebas unitarias
+Para ejecutar las pruebas unitarias creadas para el programa ejecutar el comando `go test ./clientFunctions`

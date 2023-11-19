@@ -18,3 +18,6 @@ directorio y el compilador no va a poder generar el ejecutable.
 * A pesar de que la calculadora recibe y computa correctamente los resultados para expresiones pre-fijas y post-fijas, la misma no es capaz
 de verificar que una expresión pre-fija o post-fija ingresada es una expresión *correcta*. De esta forma por favor abstenerse de ingresar
 expresiones mal formateadas dado que el programa arrojará resultados erróneos.
+
+## Pruebas unitarias
+Para ejecutar las pruebas unitarias creadas para el programa, ejecutar el comando `go test ./calcFunctions`
